@@ -309,12 +309,10 @@ vector<state> exploreStates( state current, who whoCalled ) {
             temp.myPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
             temp.opPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
 
-//            exit(0);
-
             temp.m = 0;
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
-
+            cout << "State m r c -> " << temp.m << " " << temp.r << " " << temp.c << "\n";
             children.push_back(temp);
 
         } );
@@ -325,9 +323,10 @@ vector<state> exploreStates( state current, who whoCalled ) {
 
     } else {
 
-//        I move
+//        Opponent move
         for_each( opPosition.boardMap[opPosition.row][opPosition.col].adjList.begin(), opPosition.boardMap[opPosition.row][opPosition.col].adjList.end(), [&](int i) {
 
+            cout << "pushing to state\n";
             state temp = *(new state(myPosition, opPosition));
 
             temp.opPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), op, temp.opPosition );
@@ -336,7 +335,7 @@ vector<state> exploreStates( state current, who whoCalled ) {
             temp.m = 0;
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
-
+            cout << "State m r c -> " << temp.m << " " << temp.r << " " << temp.c << "\n";
             children.push_back(temp);
 
         } );
@@ -646,7 +645,7 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
 }
 
 //currently, we are ending the tree here
-state minVal(state current, int alpha, int beta){
+state minVal(state current, int alpha, int beta, int depth){
 
     cout << "minVal called\n";
 
@@ -678,7 +677,10 @@ state minVal(state current, int alpha, int beta){
     */
 }
 
-state maxVal(state current, int alpha, int beta){
+// depth is the depth of the minimax tree
+// I will find max out of my children and all my children will find min out of their children
+// it will comprise of one depth
+state maxVal(state current, int alpha, int beta, int depth){
 
     cout << "maxVal called\n";
 
@@ -690,10 +692,11 @@ state maxVal(state current, int alpha, int beta){
 
     for_each( children.begin(), children.end(), [&](state s){
 
-        state nextState = minVal( s, -INT_MAX, INT_MAX );
+        state nextState = minVal( s, -INT_MAX, INT_MAX, depth );
         if( max < nextState.objFunction ) {
             max =  nextState.objFunction;
-            maxState = nextState;
+//            choose that children whose children's min value is more than max so far
+            maxState = s;
         }
 
     });
@@ -718,7 +721,7 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
 
     cout << "start state created\n";fflush(stdout);
 
-    state nextState = maxVal( start, -INT_MAX, INT_MAX );
+    state nextState = maxVal( start, -INT_MAX, INT_MAX, 1 );
 
     cout << "playerPosition::minimax( playerPosition myPosition, playerPosition opPosition ) found nextState\n";
 
@@ -808,9 +811,6 @@ int main(int argc, char *argv[])
 //        this will decide m r c
         myPosition.minimax( myPosition, opPosition );
 
-        cout << "myPosition.minimax( myPosition, opPosition ) returned\n";
-
-
         m = myPosition.m;
         r = myPosition.r;
         c = myPosition.c;
@@ -892,6 +892,8 @@ int main(int argc, char *argv[])
         myPosition.update( m, r, c, me, myPosition );
         opPosition.update( m, r, c, me, myPosition );
 
+        cout << "myPosition.minimax( myPosition, opPosition ) gave m r c - " << m << " " << r << " " << c << endl;
+
 //        transformation of what I am doing
         if( player != 1 ) {
             r = N + 1 - r;
@@ -904,6 +906,9 @@ int main(int argc, char *argv[])
             }
         }
 
+        cout << "Waiting for you to press something so that I can continue";
+        cin.ignore();
+
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
 
@@ -911,7 +916,7 @@ int main(int argc, char *argv[])
         n = read(sockfd, recvBuff, sizeof(recvBuff)-1);
         recvBuff[n] = 0;
 
-//        some unknown measure returned by the server after I played my turn
+//        time remaining returned by the server after I played my turn
         sscanf(recvBuff, "%f %d", &TL, &d);//d=3 indicates game continues.. d=2 indicates lost game, d=1 means game won.
         cout<< TL << " " << d << endl;
 
