@@ -289,6 +289,9 @@ public:
 
 };
 
+state minVal(state current, int alpha, int beta, int depth);
+state maxVal(state current, int alpha, int beta, int depth);
+
 vector<state> exploreStates( state current, who whoCalled ) {
 
     vector<state> children;
@@ -312,7 +315,8 @@ vector<state> exploreStates( state current, who whoCalled ) {
             temp.m = 0;
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
-            cout << "State m r c -> " << temp.m << " " << temp.r << " " << temp.c << "\n";
+            temp.findObj();
+            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
             children.push_back(temp);
 
         } );
@@ -335,7 +339,8 @@ vector<state> exploreStates( state current, who whoCalled ) {
             temp.m = 0;
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
-            cout << "State m r c -> " << temp.m << " " << temp.r << " " << temp.c << "\n";
+            temp.findObj();
+            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
             children.push_back(temp);
 
         } );
@@ -345,6 +350,20 @@ vector<state> exploreStates( state current, who whoCalled ) {
     //    I place vertical wall
 
     }
+
+//    now I will consider placing walls
+
+
+
+
+
+
+    // HERE
+
+
+
+
+
 
 //    all states have been explored
     return children;
@@ -644,7 +663,6 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
 //    cout << "Map has been updated" << endl;
 }
 
-//currently, we are ending the tree here
 state minVal(state current, int alpha, int beta, int depth){
 
     cout << "minVal called\n";
@@ -657,8 +675,11 @@ state minVal(state current, int alpha, int beta, int depth){
 
     for_each( children.begin(), children.end(), [&](state s){
 
-        if( min > s.objFunction ) {
-            min = s.objFunction;
+//        my children will maximize their objective function
+        state nextState = maxVal( s, -INT_MAX, INT_MAX, depth+1 );
+        if( min > nextState.objFunction ) {
+            min = nextState.objFunction;
+//            choose that children whose children's max value is less than min so far
             minState = s;
         }
 
@@ -684,6 +705,9 @@ state maxVal(state current, int alpha, int beta, int depth){
 
     cout << "maxVal called\n";
 
+    if( depth > 1 )
+        return current;
+
     vector<state> children;
     children = exploreStates( current, me );
 
@@ -692,6 +716,7 @@ state maxVal(state current, int alpha, int beta, int depth){
 
     for_each( children.begin(), children.end(), [&](state s){
 
+//        my children will minimize their objective function
         state nextState = minVal( s, -INT_MAX, INT_MAX, depth );
         if( max < nextState.objFunction ) {
             max =  nextState.objFunction;
