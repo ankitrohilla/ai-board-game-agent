@@ -15,6 +15,10 @@
 #define NO_PATH -10
 #define INVALID_STATE -100000
 
+long statesPruned = 0;
+long statesExplored = 0;
+long statesProcessed = 0;
+
 enum who {
     me,
     op,
@@ -233,6 +237,8 @@ public:
 
         if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
             whoWon = whoMI;
+            cout << whoWon+1 << " won\n";
+            cin.ignore();
         }
 
     }
@@ -356,13 +362,18 @@ vector<state> state::exploreStates(who whoCalled ) {
 
     cout << "exploreStates called\n";
 
+//    caller has already won, he can't move
+    if( whoWon == whoCalled )
+        goto placeWAlls;
+
     if( whoCalled == me ) {
 
 //        I move
         for_each( myPosition.boardMap[myPosition.row][myPosition.col].adjList.begin(), myPosition.boardMap[myPosition.row][myPosition.col].adjList.end(), [&](int i) {
 
             cout << "pushing to state\n";
-            state temp = *(new state(myPosition, opPosition));
+            state *t = (new state(myPosition, opPosition));
+            state temp = *t;
 
             temp.myPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
             temp.opPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
@@ -372,7 +383,14 @@ vector<state> state::exploreStates(who whoCalled ) {
             temp.c = tile::getColFromId(i);
             temp.findObj();
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+            statesExplored++;
             children.push_back(temp);
+
+//            temp.c = 1000;
+//            cout << temp.c << " " << children.back().c << endl;
+//            cin.ignore();
+
+            delete t;
 
         } );
 
@@ -382,7 +400,8 @@ vector<state> state::exploreStates(who whoCalled ) {
         for_each( opPosition.boardMap[opPosition.row][opPosition.col].adjList.begin(), opPosition.boardMap[opPosition.row][opPosition.col].adjList.end(), [&](int i) {
 
             cout << "pushing to state\n";
-            state temp = *(new state(myPosition, opPosition));
+            state *t = (new state(myPosition, opPosition));
+            state temp = *t;
 
             temp.opPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), op, temp.opPosition );
             temp.myPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), op, temp.opPosition );
@@ -392,13 +411,22 @@ vector<state> state::exploreStates(who whoCalled ) {
             temp.c = tile::getColFromId(i);
             temp.findObj();
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+            statesExplored++;
             children.push_back(temp);
+
+            delete t;
 
         } );
 
     }
 
+//    I won't consider placing walls if my opponent has already won
+    if( me == whoCalled && op == whoWon || op == whoCalled && me == whoWon )
+        return children;
+
 //    now I will consider placing walls
+
+    placeWAlls:
 
 //    no walls left
     if( whoCalled == me && myPosition.wallsLeft <= 0 )
@@ -440,7 +468,8 @@ vector<state> state::exploreStates(who whoCalled ) {
 //            wall can be placed if true
             if( (val1 || val2 || val3 || val4) && (val5 || val6 || val7 || val8) ) {
 
-                state temp = *(new state(myPosition, opPosition));
+                state *t = (new state(myPosition, opPosition));
+                state temp = *t;
 
 //                last parameter does not matter here
                 temp.myPosition.update( 1, i, j, me, temp.myPosition );
@@ -458,7 +487,10 @@ vector<state> state::exploreStates(who whoCalled ) {
 
                 cout << "pushing to state\n";
                 cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+                statesExplored++;
                 children.push_back(temp);
+
+                delete t;
 
             }
 
@@ -499,7 +531,8 @@ vector<state> state::exploreStates(who whoCalled ) {
 //            wall can be placed if true
             if( (val1 || val2 || val5 || val6) && (val3 || val4 || val7 || val8) ) {
 
-                state temp = *(new state(myPosition, opPosition));
+                state *t = (new state(myPosition, opPosition));
+                state temp = *t;
 
 //                last parameter does not matter here
                 temp.myPosition.update( 2, i, j, me, temp.myPosition );
@@ -516,7 +549,10 @@ vector<state> state::exploreStates(who whoCalled ) {
 
                 cout << "pushing to state\n";
                 cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+                statesExplored++;
                 children.push_back(temp);
+
+                delete t;
 
             }
         }
@@ -824,8 +860,12 @@ state minVal(state current, int alpha, int beta, int depth){
 
     cout << "minVal called\n";
 
+    statesProcessed++;
+
     vector<state> children;
     children = current.exploreStates( op );
+
+    cout << children.size();
 
     int min = INT_MAX;
     state minState;
@@ -871,6 +911,8 @@ state maxVal(state current, int alpha, int beta, int depth){
 
     cout << "maxVal called\n";
 
+    statesProcessed++;
+
     vector<state> children;
     children = current.exploreStates( me );
 
@@ -910,7 +952,7 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
 
     state start = *(new state(myPosition, opPosition));
 
-    cout << "start state created\n";fflush(stdout);
+//    cout << "start state created\n";fflush(stdout);
 
     state nextState = maxVal( start, -INT_MAX, INT_MAX, 1 );
 
@@ -1099,8 +1141,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        cout << "Waiting for you to press something so that I can continue";
-        cin.ignore();
+//        cout << "Waiting for you to press something so that I can continue";
+//        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
