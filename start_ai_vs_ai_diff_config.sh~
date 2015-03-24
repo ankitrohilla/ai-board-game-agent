@@ -1,0 +1,2 @@
+gnome-terminal --command=cd\ Quoridor_1\nQuoridor_1python\ TkBoard.py
+

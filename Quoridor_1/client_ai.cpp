@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
+#include <arpa/inet.h>
 #include <bits/stdc++.h>
 #include <vector>
 #include <queue>
@@ -16,17 +16,22 @@
 #define INVALID_STATE -100000
 #define CUTOFF_DEPTH 1
 #define DESIRABILITY_CUTOFF 0
+#define PASS 1000
+#define TRICKY_PATH_BLOCK 2300
 
 long statesPruned = 0;
 long statesExplored = 0;
 long statesProcessed = 0;
 
+int marginOfVictory = 0;
+
 enum who {
     me,
     op,
+    none,
 };
 
-who whoWon = (who)100;
+who whoWon = (who)none;
 
 using namespace std;
 // Complete the function below to print 1 integer which will be your next move
@@ -220,6 +225,13 @@ public:
 
     }
 
+//    returns true IFF opponent is blocking my path and I am unable to get a path to goal
+//    only gets called when opponent moves
+    bool checkPathBlock( int r, int c ) {
+        if( findShortestPath() == NO_PATH )
+            return true;
+    }
+
     void updateMap( int m, int r, int c, who whoCalled, playerPosition otherPlayer );
 
     void updatePosition( int row, int col ) {
@@ -235,12 +247,22 @@ public:
 
         cout << "oldId oldRow oldCol id row col - " << oldId << " " << oldRow << " " << oldCol << " " << id << " " << row << " "<< col << "\n";
 
-        if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
+    }
+
+    void declareWinner() {
+
+//        if someone has already won
+//        else check if I won
+        if( whoWon != none ) {
+            if( whoWon == whoMI ) {
+                marginOfVictory++;
+                cout << "margin of victory -> " << marginOfVictory << endl;
+            }
+        }
+        else if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
             whoWon = whoMI;
             cout << whoWon+1 << " won\n";
-            cin.ignore();
         }
-
     }
 
 //    the order for this function is very important, first positions are updated, then graph of map is updated, then shortest path is obtained
@@ -252,6 +274,10 @@ public:
 
         cout << (int)whoMI+1 << "'s turn - ";
 
+//        PASS
+        if( m == 0 && r == 0 && c == 0 )
+            return;
+
         if( m == 0 && whoMI == whoCalled )
             updatePosition( r, c );
 
@@ -262,13 +288,7 @@ public:
         if( m != 0 && whoCalled == whoMI )
             wallsLeft--;
 
-//        cout << "Map status before calling updateMap -\n";
-//        printAdjList();
-
         updateMap( m, r, c, whoCalled, otherPlayer );
-
-//        cout << "Map status after calling updateMap of player << " << whoCalled+1 << " -\n";
-//        printAdjList();
 
         findShortestPath();
 
@@ -277,7 +297,7 @@ public:
 
     void printPath() {
         cout << "According to " << whoMI+1 << " :-\n";
-        for_each( pathToGoal.begin(), pathToGoal.end(), [](int i){ cout<<i<<" "; });
+        for_each( pathToGoal.begin(), pathToGoal.end(), [](int i){ cout<<"["<<tile::getRowFromId(i)<<","<<tile::getColFromId(i)<<"]"; });
         cout << endl;
     }
 
@@ -337,8 +357,15 @@ public:
     void findObj() {
         if( opPosition.findShortestPath() != NO_PATH && myPosition.findShortestPath() != NO_PATH )
             objFunction = opPosition.findShortestPath() - myPosition.findShortestPath();
+        else if( whoWon == op )
+            objFunction = -myPosition.findShortestPath();
         else
             objFunction = INVALID_STATE;
+    }
+
+    void printStatePaths() {
+        myPosition.printPath();
+        opPosition.printPath();
     }
 
     vector<state> exploreStates( who whoCalled );
@@ -365,42 +392,83 @@ vector<state> state::exploreStates(who whoCalled ) {
     cout << "exploreStates called\n";
 
 //    caller has already won, he can't move
-    if( whoWon == whoCalled )
+    if( whoWon == whoCalled ) {
+        cout << "declared that " << whoWon+1 << " has won the match\n";
         goto placeWAlls;
+    }
 
     if( whoCalled == me ) {
+
+//        this is true when there is a path without DEAD END
+        bool pathFound = false;
+
+        cout << "My adj list - ";
+        for_each( myPosition.boardMap[myPosition.row][myPosition.col].adjList.begin(), myPosition.boardMap[myPosition.row][myPosition.col].adjList.end(), [&](int i) {cout<<i<<" ";} );
 
 //        I move
         for_each( myPosition.boardMap[myPosition.row][myPosition.col].adjList.begin(), myPosition.boardMap[myPosition.row][myPosition.col].adjList.end(), [&](int i) {
 
-            cout << "pushing to state\n";
+            cout << "\npushing to state\n";
             state *t = (new state(myPosition, opPosition));
             state temp = *t;
 
             temp.myPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
             temp.opPosition.update( 0, tile::getRowFromId(i), tile::getColFromId(i), me, temp.myPosition );
 
-//            avoid oscillating, don't consider this state
-            if( temp.myPosition.row == ::myPosition.oldRow && temp.myPosition.col == ::myPosition.oldCol && temp.myPosition.findShortestPath() == ::myPosition.oldPath )
+//            avoid oscillating
+//            BUT consider this state only if other paths are DEAD END, this thing is handled after this for_each loop
+            if( temp.myPosition.row == myPosition.oldRow && temp.myPosition.col == myPosition.oldCol && temp.myPosition.findShortestPath() == myPosition.oldPath )
                 goto afterPush;
+
+//            check for dead end : BEGIN
+
+//            path to goal from this state goes through my current location
+            if( temp.myPosition.pathToGoal[1] != myPosition.id )
+                pathFound = true;
+
+//            check for dead end : END
 
             temp.m = 0;
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
             temp.findObj();
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+
+//            check for TRICKY PATH BLOCK when my movement blocks other person's path
+            if( temp.objFunction == INVALID_STATE ) {
+                cout << "the state mentioned above has been marked as TRICKY_PATH_BLOCK\n";
+                temp.objFunction = TRICKY_PATH_BLOCK;
+            }
+
             statesExplored++;
             children.push_back(temp);
 
             afterPush:
 
-//            temp.c = 1000;
-//            cout << temp.c << " " << children.back().c << endl;
-//            cin.ignore();
-
             delete t;
 
         } );
+
+//        check for oscillating move, will have to go back to where I was
+        if( !pathFound ) {
+
+            cout << "pushing to state\n";
+            state *t = (new state(myPosition, opPosition));
+            state temp = *t;
+
+            temp.myPosition.update( 0, myPosition.oldRow, myPosition.oldCol, me, temp.myPosition );
+            temp.opPosition.update( 0, myPosition.oldRow, myPosition.oldCol, me, temp.myPosition );
+
+            temp.m = 0;
+            temp.r = myPosition.oldRow;
+            temp.c = myPosition.oldCol;
+            temp.findObj();
+            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+            statesExplored++;
+            children.push_back(temp);
+
+            delete t;
+        }
 
     } else {
 
@@ -498,17 +566,23 @@ vector<state> state::exploreStates(who whoCalled ) {
                 temp.findObj();
 
 //                no path to goal in this state, check for another location
-                if( temp.objFunction == INVALID_STATE )
+                if( temp.objFunction == INVALID_STATE ) {
+                    delete t;
                     continue;
+                }
 
                 if( whoCalled == me ) {
                     int stateDesirability = temp.objFunction - this->objFunction;
-                    if( stateDesirability <= DESIRABILITY_CUTOFF )
+                    if( stateDesirability <= DESIRABILITY_CUTOFF ) {
+                        delete t;
                         continue;
+                    }
                 } else {
                     int stateDesirability = this->objFunction - temp.objFunction;
-                    if( stateDesirability <= DESIRABILITY_CUTOFF )
+                    if( stateDesirability <= DESIRABILITY_CUTOFF ) {
+                        delete t;
                         continue;
+                    }
                 }
 
                 cout << "pushing to state\n";
@@ -579,17 +653,23 @@ vector<state> state::exploreStates(who whoCalled ) {
                 temp.findObj();
 
 //                no path to goal in this state, check for another location
-                if( temp.objFunction == INVALID_STATE )
+                if( temp.objFunction == INVALID_STATE ) {
+                    delete t;
                     continue;
+                }
 
                 if( whoCalled == me ) {
                     int stateDesirability = temp.objFunction - this->objFunction;
-                    if( stateDesirability <= DESIRABILITY_CUTOFF )
+                    if( stateDesirability <= DESIRABILITY_CUTOFF ) {
+                        delete t;
                         continue;
+                    }
                 } else {
                     int stateDesirability = this->objFunction - temp.objFunction;
-                    if( stateDesirability <= DESIRABILITY_CUTOFF )
+                    if( stateDesirability <= DESIRABILITY_CUTOFF ) {
+                        delete t;
                         continue;
+                    }
                 }
 
                 cout << "pushing to state\n";
@@ -652,35 +732,6 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow-1 ][ oldCol ].adjList = temp;
             temp.clear();
         }
-        if( row > 1 ) {
-            vector<int> newPosTopAdjList = boardMap[ row-1 ][ col ].adjList;
-
-            for_each( newPosTopAdjList.begin(), newPosTopAdjList.end(), [&](int i){
-
-                if( i == id ) {
-
-//                    if current location has no wall below or current location is not at Nth row
-//                    (oldRow==row+1) ensures the above comment's condition, look carefully
-//                    in the beginning, oldRow and row has problems, hence id+M<82 is placed
-//                    else if current location has no wall to left or current location is not at 1st col
-//                         if current location has no wall to righ or current location is not at Mth col
-                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() || (oldRow==row+1)) && id+M<82 ) {
-                        temp.push_back( id+M );
-                    } else {
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end() )
-                            temp.push_back( id-1 );
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end() )
-                            temp.push_back( id+1 );
-                    }
-
-                } else
-                    temp.push_back(i);
-
-            });
-            boardMap[ row-1 ][ col ].adjList = temp;
-            temp.clear();
-        }
-
 //        lef
         if( oldCol > 1 ) {
             vector<int> oldPosLefAdjList = boardMap[ oldRow ][ oldCol-1l ].adjList;
@@ -698,34 +749,6 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow ][ oldCol-1 ].adjList = temp;
             temp.clear();
         }
-        if( col > 1 ) {
-            vector<int> newPosLefAdjList = boardMap[ row ][ col-1 ].adjList;
-
-            for_each( newPosLefAdjList.begin(), newPosLefAdjList.end(), [&](int i){
-
-                if( i == id ) {
-
-//                    if current location has no wall to righ or current location is not at Mth col
-//                    (oldCol==col+1) along with id-M>0 ensures the above comment's condition, look carefully
-//                    else if current location has no wall above or current location is not at 1st row
-//                         if current location has no wall below or current location is not at Nth row
-                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end() || (oldCol==col+1)) ) {
-                        temp.push_back( id+1 );
-                    } else {
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-M ) != newPosAdjList.end() )
-                            temp.push_back( id-M );
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() )
-                            temp.push_back( id+M );
-                    }
-
-                } else
-                    temp.push_back(i);
-
-            });
-            boardMap[ row ][ col-1 ].adjList = temp;
-            temp.clear();
-        }
-
 //        rig
         if( oldCol < M ) {
             vector<int> oldPosRigAdjList = boardMap[ oldRow ][ oldCol+1 ].adjList;
@@ -743,34 +766,6 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow ][ oldCol+1 ].adjList = temp;
             temp.clear();
         }
-        if( col < M ) {
-            vector<int> newPosRigAdjList = boardMap[ row ][ col+1 ].adjList;
-
-            for_each( newPosRigAdjList.begin(), newPosRigAdjList.end(), [&](int i){
-
-                if( i == id ) {
-
-//                    if current location has no wall to left or current location is not at 1st col
-//                    (oldCol==col-1) along with id-M>0 ensures the above comment's condition, look carefully
-//                    else if current location has no wall above or current location is not at 1st row
-//                         if current location has no wall below or current location is not at Nth row
-                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end() || (oldCol==col-1)) ) {
-                        temp.push_back( id-1 );
-                    } else {
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-M ) != newPosAdjList.end() )
-                            temp.push_back( id-M );
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() )
-                            temp.push_back( id+M );
-                    }
-
-                } else
-                    temp.push_back(i);
-
-            });
-            boardMap[ row ][ col+1 ].adjList = temp;
-            temp.clear();
-        }
-
 //        bot
         if( oldRow < N ) {
             vector<int> oldPosBotAdjList = boardMap[ oldRow+1 ][ oldCol ].adjList;
@@ -789,6 +784,94 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             temp.clear();
 
         }
+
+//        top
+        if( row > 1 ) {
+            vector<int> newPosTopAdjList = boardMap[ row-1 ][ col ].adjList;
+
+            for_each( newPosTopAdjList.begin(), newPosTopAdjList.end(), [&](int i){
+
+                if( i == id ) {
+
+//                    if current location has no wall below or current location is not at Nth row
+//                    (oldRow==row+1) ensures the above comment's condition, look carefully
+//                    in the beginning, oldRow and row has problems, hence id+M<82 is placed
+//                    else if current location has no wall to left or current location is not at 1st col
+//                         if current location has no wall to righ or current location is not at Mth col
+                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() || (oldRow==row+1)) && id+M<82 ) {
+                        temp.push_back( id+M );
+                    } else {
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end()|| (oldCol==col-1) )
+                            temp.push_back( id-1 );
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end()|| (oldCol==col+1) )
+                            temp.push_back( id+1 );
+                    }
+
+                } else
+                    temp.push_back(i);
+
+            });
+            boardMap[ row-1 ][ col ].adjList = temp;
+            temp.clear();
+        }
+//        lef
+        if( col > 1 ) {
+            vector<int> newPosLefAdjList = boardMap[ row ][ col-1 ].adjList;
+
+            for_each( newPosLefAdjList.begin(), newPosLefAdjList.end(), [&](int i){
+
+                if( i == id ) {
+
+//                    if current location has no wall to righ or current location is not at Mth col
+//                    (oldCol==col+1) along with id-M>0 ensures the above comment's condition, look carefully
+//                    else if current location has no wall above or current location is not at 1st row
+//                         if current location has no wall below or current location is not at Nth row
+                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end() || (oldCol==col+1)) ) {
+                        temp.push_back( id+1 );
+                    } else {
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-M ) != newPosAdjList.end() || (oldRow==row-1) )
+                            temp.push_back( id-M );
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() || (oldRow==row+1) )
+                            temp.push_back( id+M );
+                    }
+
+                } else
+                    temp.push_back(i);
+
+            });
+            boardMap[ row ][ col-1 ].adjList = temp;
+            temp.clear();
+        }
+//        rig
+        if( col < M ) {
+            vector<int> newPosRigAdjList = boardMap[ row ][ col+1 ].adjList;
+
+            for_each( newPosRigAdjList.begin(), newPosRigAdjList.end(), [&](int i){
+
+                if( i == id ) {
+
+//                    if current location has no wall to left or current location is not at 1st col
+//                    (oldCol==col-1) along with id-M>0 ensures the above comment's condition, look carefully
+//                    else if current location has no wall above or current location is not at 1st row
+//                         if current location has no wall below or current location is not at Nth row
+                    if( (find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end() || (oldCol==col-1)) ) {
+                        temp.push_back( id-1 );
+                    } else {
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-M ) != newPosAdjList.end() || (oldRow==row-1) )
+                            temp.push_back( id-M );
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+M ) != newPosAdjList.end() || (oldRow==row+1) )
+                            temp.push_back( id+M );
+                    }
+
+                } else
+                    temp.push_back(i);
+
+            });
+
+            boardMap[ row ][ col+1 ].adjList = temp;
+            temp.clear();
+        }
+//        bot
         if( row < N ) {
             vector<int> newPosBotAdjList = boardMap[ row+1 ][ col ].adjList;
 
@@ -804,9 +887,9 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
                     if( (find( newPosAdjList.begin(), newPosAdjList.end(), id-M ) != newPosAdjList.end() || (oldRow==row-1)) && id-M>0 ) {
                         temp.push_back( id-M );
                     } else {
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end() )
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id-1 ) != newPosAdjList.end() || (oldCol==col-1) )
                             temp.push_back( id-1 );
-                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end() )
+                        if( find( newPosAdjList.begin(), newPosAdjList.end(), id+1 ) != newPosAdjList.end() || (oldCol==col+1) )
                             temp.push_back( id+1 );
                     }
 
@@ -906,6 +989,7 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
     current.findObj();
 
     if( depth > CUTOFF_DEPTH ) {
+        cout << "minVal no children\n";
         current.utilityFunction = current.objFunction;
         return current;
     }
@@ -917,6 +1001,12 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
     vector<state> children;
     children = current.exploreStates( op );
 
+    if( children.size() == 0 ) {
+        cout << "minVal no children\n";
+        current.utilityFunction = PASS;
+        return current;
+    }
+
     int min = INT_MAX;
     state minState;
 
@@ -925,18 +1015,43 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
         state s = *it;
         s.findObj();
 
+//        this child is blocking opponent i.e. TRICKY_PATH_BLOCK and I was not here before, then come here for sure
+        if( s.objFunction == TRICKY_PATH_BLOCK && s.opPosition.findShortestPath() < current.opPosition.findShortestPath() ) {
+            s.utilityFunction = -INT_MAX;
+            return s;
+        }
+
 //        my children will maximize their objective function
         state nextState = maxVal( s, alpha, beta, depth+1, s.objFunction );
 
-//        update beta value
-        if( nextState.utilityFunction < beta )
-            beta = nextState.utilityFunction;
+//        if the other player PASSED, objective function of s is its utility function
+//        else, do normal gaming
+        if( nextState.utilityFunction == PASS ) {
+            s.utilityFunction = s.objFunction;
+            cout << "\n\n\n\n\ns m r c " << s.m << " " << s.r << " " << s.c << endl;
 
-        if( min > nextState.utilityFunction ) {
-            min = nextState.utilityFunction;
-//            choose that children whose children's max value is less than min so far
-            minState = s;
-            minState.utilityFunction = nextState.utilityFunction;
+            if( min > s.utilityFunction ) {
+                min = s.utilityFunction;
+                minState = s;
+            }
+        } else {
+//            update beta value
+            if( nextState.utilityFunction < beta )
+                beta = nextState.utilityFunction;
+
+            if( min > nextState.utilityFunction ) {
+                min = nextState.utilityFunction;
+//                choose that children whose children's max value is less than min so far
+                minState = s;
+                minState.utilityFunction = nextState.utilityFunction;
+            }
+
+//            utility function is same
+//            tie breaking and favour that child whose objective function is higher
+            if( min == nextState.utilityFunction && nextState.objFunction < minState.objFunction ) {
+                minState = s;
+                minState.utilityFunction = nextState.utilityFunction;
+            }
         }
 
     }
@@ -975,26 +1090,63 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
     vector<state> children;
     children = current.exploreStates( me );
 
+    if( children.size() == 0 ) {
+        cout << "maxVal no children\n";
+        current.utilityFunction = PASS;
+        return current;
+    }
+
     int max = -INT_MAX;
     state maxState;
 
     for( vecSIt it = children.begin(); (it != children.end()) && !(beta <= alpha); it++) {
 
+        cout << "child number " << it - children.begin() << endl;
+
         state s = *it;
+
+//        this child is blocking opponent i.e. TRICKY_PATH_BLOCK and I was not here before, then come here for sure
+        cout << "\ns.objFunction s.myPosition.findShortestPath() current.myPosition.findShortestPath() " << s.objFunction << " " << s.myPosition.findShortestPath() << " " << current.myPosition.findShortestPath() << endl;
+        if( s.objFunction == TRICKY_PATH_BLOCK && s.myPosition.findShortestPath() < current.myPosition.findShortestPath() ) {
+            s.utilityFunction = +INT_MAX;
+            return s;
+        }
+
         s.findObj();
 
 //        my children will minimize their objective function
         state nextState = minVal( s, alpha, beta, depth, s.objFunction );
 
-//        update alpha value
-        if( nextState.utilityFunction > alpha )
-            alpha = nextState.utilityFunction;
+//        if the other player PASSED, objective function of s is its utility function
+//        else, do normal gaming
+        if( nextState.utilityFunction == PASS ) {
+            s.utilityFunction = s.objFunction;
+            cout << "\n\n\n\n\ns m r c " << s.m << " " << s.r << " " << s.c << endl;
 
-        if( max < nextState.utilityFunction ) {
-            max =  nextState.utilityFunction;
-//            choose that children whose children's min value is more than max so far
-            maxState = s;
-            maxState.utilityFunction = nextState.utilityFunction;
+            if( max < s.utilityFunction ) {
+                max = s.utilityFunction;
+                maxState = s;
+            }
+        }
+        else {
+//            update alpha value
+            if( nextState.utilityFunction > alpha )
+                alpha = nextState.utilityFunction;
+
+            if( max < nextState.utilityFunction ) {
+                max =  nextState.utilityFunction;
+//                choose that children whose children's min value is more than max so far
+                maxState = s;
+                maxState.utilityFunction = nextState.utilityFunction;
+            }
+
+//            utility function is same
+//            tie breaking and favour that child whose objective function is higher
+            if( max == nextState.utilityFunction && maxState.objFunction < s.objFunction ) {
+                cout << "tie happened\n";
+                maxState = s;
+                maxState.utilityFunction = nextState.utilityFunction;
+            }
         }
 
     }
@@ -1024,8 +1176,17 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
 
     state nextState = maxVal( start, -INT_MAX, INT_MAX, 1, start.objFunction );
 
-    cout << "playerPosition::minimax( playerPosition myPosition, playerPosition opPosition ) found nextState with utility Function - " << nextState.utilityFunction << "\n";
+//    pass
+    if( nextState.utilityFunction == PASS ) {
+        this->m = 0;
+        this->r = 0;
+        this->c = 0;
+        return;
+    }
 
+    cout << "playerPosition::minimax( playerPosition myPosition, playerPosition opPosition ) found nextState with utility Function - " << nextState.utilityFunction << "\n";
+    cout << "nextState's path is - \n";
+    nextState.myPosition.printPath();
 //    this is the motive of minimax
     this->m = nextState.m;
     this->r = nextState.r;
@@ -1045,36 +1206,36 @@ int main(int argc, char *argv[])
     int sockfd = 0, n = 0;
     char recvBuff[1024];
     char sendBuff[1025];
-    struct sockaddr_in serv_addr; 
+    struct sockaddr_in serv_addr;
 
     if(argc != 3)
     {
         printf("\n Usage: %s <ip of server> <port no> \n",argv[0]);
         return 1;
-    } 
+    }
 
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Error : Could not create socket \n");
         return 1;
-    } 
+    }
 
-    memset(&serv_addr, '0', sizeof(serv_addr)); 
+    memset(&serv_addr, '0', sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(atoi(argv[2])); 
+    serv_addr.sin_port = htons(atoi(argv[2]));
 
     if(inet_pton(AF_INET, argv[1], &serv_addr.sin_addr)<=0)
     {
         printf("\n inet_pton error occured\n");
         return 1;
-    } 
+    }
 
     if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
        printf("\n Error : Connect Failed \n");
        return 1;
-    } 
+    }
 
     cout<<"Quoridor will start..."<<endl;
 
@@ -1089,9 +1250,9 @@ int main(int argc, char *argv[])
     float TL;
     int om,oro,oco;
     int m,r,c;
-	int d=3;
+    int d=3;
     char s[100];
-	int x=1;
+    int x=1;
 
 //    start the game NOW
 //    our code starts here
@@ -1109,7 +1270,7 @@ int main(int argc, char *argv[])
 //    player 1 will have the first move
     if(player == 1)
     {
-        memset(sendBuff, '0', sizeof(sendBuff)); 
+        memset(sendBuff, '0', sizeof(sendBuff));
         string temp;
 
 //        this will decide m r c
@@ -1168,8 +1329,27 @@ int main(int argc, char *argv[])
             }
         }
 
+        cout << "\nMy adj list before update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list before update\n";
+        opPosition.printAdjList();
+
         opPosition.update( om, oro, oco, op, opPosition );
         myPosition.update( om, oro, oco, op, opPosition );
+
+        cout << "My adj list after update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list after update\n";
+        opPosition.printAdjList();
+
+        opPosition.declareWinner();
+
+//        opponent's move blocked me
+        if( myPosition.checkPathBlock( oro, oco) == true && om == 0 ) {
+            cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nMY PATH HAS BEEN BLOCKED";
+            cout << "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n";
+            cin.ignore();
+        }
 
         if( d == 1 )
         {
@@ -1182,7 +1362,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        memset(sendBuff, '0', sizeof(sendBuff)); 
+        memset(sendBuff, '0', sizeof(sendBuff));
         string temp;
 
 //        my move
@@ -1193,13 +1373,20 @@ int main(int argc, char *argv[])
         r = myPosition.r;
         c = myPosition.c;
 
+        cout << "\nMy adj list before update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list before update\n";
+        opPosition.printAdjList();
+
         myPosition.update( m, r, c, me, myPosition );
         opPosition.update( m, r, c, me, myPosition );
 
-        cout << "My adj list \n";
+        cout << "My adj list after update\n";
         myPosition.printAdjList();
-        cout << "Op adj list \n";
+        cout << "Op adj list after update\n";
         opPosition.printAdjList();
+
+        myPosition.declareWinner();
 
         cout << "myPosition.minimax( myPosition, opPosition ) gave m r c - " << m << " " << r << " " << c << endl;
 
@@ -1218,8 +1405,7 @@ int main(int argc, char *argv[])
         }
 
         cout << "Waiting for you to press something so that I can continue\n";
-        cout << "statesExplored and statesProcessed -> " << statesExplored << " " << statesProcessed << endl;
-//        cin.ignore();
+        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
