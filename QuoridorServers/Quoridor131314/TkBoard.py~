@@ -221,7 +221,7 @@ class TkBoard():
 			if turn==0 and WON1==1:
 				socket_list[0].send(message2+" 1")
 				socket_list[1].send(message+" 2")
-				print "Player 1 made invalid move, But, Player 1 wins"
+				print "Player 1 made invalid move, But, Player 1 wins" % msg[0]
 			elif turn==0 and WON1==0:
 				socket_list[0].send(message2+" 2")
 				socket_list[1].send(message+" 1")

@@ -127,9 +127,9 @@ class TkBoard():
 	global winners
 	global el 
 	turn = 0
-	timeout=1200.0
-	trackTime1=1200.0
-	trackTime2=1200.0
+	timeout=240.0
+	trackTime1=240.0
+	trackTime2=240.0
 	global message
 	global message2
 	for player in socket_list:
@@ -221,7 +221,7 @@ class TkBoard():
 			if turn==0 and WON1==1:
 				socket_list[0].send(message2+" 1")
 				socket_list[1].send(message+" 2")
-				print "Player 1 made invalid move because he sent m r c as , %s But, Player 1 wins" % msg[0]
+				print "Player 1 made invalid move, But, Player 1 wins" % msg[0]
 			elif turn==0 and WON1==0:
 				socket_list[0].send(message2+" 2")
 				socket_list[1].send(message+" 1")

@@ -14,17 +14,19 @@
 
 #define NO_PATH -10
 #define INVALID_STATE -100000
-
+#define STANDARD_CUTOFF_DEPTH 3
+#define STANDARD_DESIRABILITY_CUTOFF 1
 #define PASS 1000
 #define TRICKY_PATH_BLOCK 2300
 #define MAX_ID (M*N+1)
 
 float TL;
 
-// when this is 0, I found the bug where server did not declare victory
-int DESIRABILITY_CUTOFF = 0;
+int DESIRABILITY_CUTOFF = STANDARD_DESIRABILITY_CUTOFF;
 
-int cutoffDepth = 1;
+int cutoffDepth = STANDARD_CUTOFF_DEPTH;
+
+int turnNumber = 0;
 
 long statesPruned = 0;
 long statesExplored = 0;
@@ -466,8 +468,12 @@ public:
     }
 
     void findObj() {
-        if( opPosition.findShortestPath() != NO_PATH && myPosition.findShortestPath() != NO_PATH )
+        if( opPosition.findShortestPath() != NO_PATH && myPosition.findShortestPath() != NO_PATH ) {
             objFunction = opPosition.findShortestPath() - myPosition.findShortestPath();
+//            opponent is too close to victory, much bad state
+            if( opPosition.findShortestPath() < 3 )
+                objFunction -= 10;
+        }
         else if( whoWon == op )
             objFunction = -myPosition.findShortestPath();
         else
@@ -1486,7 +1492,7 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
     if( TL < 7.0 )
         cutoffDepth = 1;
     else
-        cutoffDepth = 1;
+        cutoffDepth = STANDARD_CUTOFF_DEPTH;
 
     state nextState = maxVal( start, -INT_MAX, INT_MAX, 1, start.objFunction );
 
@@ -1627,7 +1633,10 @@ int main(int argc, char *argv[])
 //    play the game
     while(x)
     {
-        cout << "Inside while\n";
+        turnNumber++;
+        if( turnNumber > 6 )
+            DESIRABILITY_CUTOFF = STANDARD_DESIRABILITY_CUTOFF;
+        cout << "Inside while and " << turnNumber << "th turn\n";
         memset(recvBuff, '0',sizeof(recvBuff));
         n = read(sockfd, recvBuff, sizeof(recvBuff)-1);
         recvBuff[n] = 0;
@@ -1732,7 +1741,7 @@ int main(int argc, char *argv[])
         }
 
         cout << "Waiting for you to press something so that I can send m r c as " << m << " " << r << " " << c << "\n";
-        cin.ignore();
+//        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));

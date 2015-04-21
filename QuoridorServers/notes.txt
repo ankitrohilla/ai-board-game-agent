@@ -1,0 +1,6 @@
+9X9 client_defence  as green defeated when DESIRABILITY_CUTOFF = 1 after 6 turns
+9X9 client_harinder as green won      when DESIRABILITY_CUTOFF = 1 after 6 turns because I did not place walls
+
+to rectify the problem, I am changing the findObj() so that if the other player is close to victory, consider it heavy and it worked a bit but still losing to client_harinder
+
+there might be a problem with our minimax as increasing depth makes our player play bad

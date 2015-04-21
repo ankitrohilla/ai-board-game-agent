@@ -125,9 +125,9 @@ class TkBoard():
 	global winners
 	global el 
 	turn = 0
-	timeout=6000.0
-	trackTime1=6000.0
-	trackTime2=6000.0
+	timeout=120.0
+	trackTime1=120.0
+	trackTime2=120.0
 	global message
 	global message2
 	for player in socket_list:
