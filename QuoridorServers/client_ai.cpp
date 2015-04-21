@@ -14,12 +14,15 @@
 
 #define NO_PATH -10
 #define INVALID_STATE -100000
-#define DESIRABILITY_CUTOFF 0
+
 #define PASS 1000
 #define TRICKY_PATH_BLOCK 2300
 #define MAX_ID (M*N+1)
 
 float TL;
+
+// when this is 0, I found the bug where server did not declare victory
+int DESIRABILITY_CUTOFF = 0;
 
 int cutoffDepth = 1;
 
@@ -478,9 +481,6 @@ public:
 
     vector<state> exploreStates( who whoCalled );
 
-//    when both players have reached the destination
-//    bool isLeaf
-
 };
 
 int state::statesCreated = 0;
@@ -663,6 +663,7 @@ vector<state> state::exploreStates(who whoCalled ) {
 //            wall can be placed if true
             if( (val1 || val2 || val3 || val4) && (val5 || val6 || val7 || val8) ) {
 
+//                temp is the new state and this pointer is referring to current state
                 state *t = (new state(myPosition, opPosition));
                 state temp = *t;
 
@@ -1731,7 +1732,7 @@ int main(int argc, char *argv[])
         }
 
         cout << "Waiting for you to press something so that I can send m r c as " << m << " " << r << " " << c << "\n";
-//        cin.ignore();
+        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
