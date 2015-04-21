@@ -18,6 +18,8 @@
 #define PASS 1000
 #define TRICKY_PATH_BLOCK 2300
 
+float TL;
+
 int cutoffDepth = 1;
 
 long statesPruned = 0;
@@ -256,20 +258,81 @@ public:
 
     }
 
-    void declareWinner() {
+    void declareWinner();
 
-//        if someone has already won
-//        else check if I won
-        if( whoWon != none ) {
-            if( whoWon == whoMI ) {
-                marginOfVictory++;
-                cout << "margin of victory -> " << marginOfVictory << endl;
-            }
+//    the other player has won and will be TOTALLY removed
+    void removeOtherPlayer( int row, int col ) {
+
+        int id = tile::getIdFromRowCol(row,col);
+
+        vector<int> temp;
+        bool pushed = false;
+
+//        checking for the cell to the lef of the winner
+        if( col > 1 ) {
+            for_each( boardMap[row][col-1].adjList.begin(), boardMap[row][col-1].adjList.end(), [&](int i){
+
+                if( i == id+1 || i == id-M || i == id+M ) {
+                    if( !pushed ) {
+                        temp.push_back( id );
+                        pushed = true;
+                    }
+                } else {
+                    temp.push_back( i );
+                }
+
+            });
+            boardMap[row][col-1].adjList = temp;
         }
-        else if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
-            whoWon = whoMI;
-            cout << whoWon+1 << " won\n";
+//        checking for the cell to the rig of the winner
+        if( col < M ) {
+            for_each( boardMap[row][col+1].adjList.begin(), boardMap[row][col+1].adjList.end(), [&](int i){
+
+                if( i == id-1 || i == id-M || i == id+M ) {
+                    if( !pushed ) {
+                        temp.push_back( id );
+                        pushed = true;
+                    }
+                } else {
+                    temp.push_back( i );
+                }
+
+            });
+            boardMap[row][col+1].adjList = temp;
         }
+//        checking for the cell to the top of the winner
+        if( row > 1 ) {
+            for_each( boardMap[row-1][col].adjList.begin(), boardMap[row-1][col].adjList.end(), [&](int i){
+
+                if( i == id+M || i == id-1 || i == id+1 ) {
+                    if( !pushed ) {
+                        temp.push_back( id );
+                        pushed = true;
+                    }
+                } else {
+                    temp.push_back( i );
+                }
+
+            });
+            boardMap[row-1][col].adjList = temp;
+        }
+//        checking for the cell to the bot of the winner
+        if( row < N ) {
+            for_each( boardMap[row+1][col].adjList.begin(), boardMap[row+1][col].adjList.end(), [&](int i){
+
+                if( i == id-M || i == id-1 || i == id+1 ) {
+                    if( !pushed ) {
+                        temp.push_back( id );
+                        pushed = true;
+                    }
+                } else {
+                    temp.push_back( i );
+                }
+
+            });
+            boardMap[row+1][col].adjList = temp;
+        }
+
     }
 
 //    the order for this function is very important, first positions are updated, then graph of map is updated, then shortest path is obtained
@@ -327,6 +390,30 @@ public:
     void minimax( playerPosition myPosition, playerPosition opPosition );
 
 }myPosition, opPosition;
+
+void playerPosition::declareWinner() {
+
+//        if someone has already won
+//        else check if I won
+    if( whoWon != none && whoWon == whoMI ) {
+        marginOfVictory++;
+        cout << "margin of victory -> " << marginOfVictory << endl;
+    } else if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
+        whoWon = whoMI;
+        cout << whoWon+1 << " won\n";
+    } else if( whoWon != none && whoWon != whoMI ) {
+
+//        if op has won
+//        else me has won
+        if( whoMI == me ) {
+            removeOtherPlayer( opPosition.row, opPosition.col);
+        } else if( whoMI == op ) {
+            removeOtherPlayer( myPosition.row, myPosition.col);
+        }
+
+    }
+}
+
 
 int playerPosition::playersConstructed = 0;
 
@@ -1012,7 +1099,10 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
     children = current.exploreStates( op );
     current.branchingFactor = children.size();
 
-    cout << "branching factor is " << current.branchingFactor << endl;
+    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
+        cutoffDepth = 1;
+
+    cout << "cutoffDepth and branching factor is " << cutoffDepth << " " << current.branchingFactor << endl;
 
     if( children.size() == 0 ) {
 //        cout << "minVal no children\n";
@@ -1104,7 +1194,10 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
     children = current.exploreStates( me );
     current.branchingFactor = children.size();
 
-    cout << "branching factor is " << current.branchingFactor << endl;
+    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
+        cutoffDepth = 1;
+
+    cout << "cutoffDepth and branching factor is " << cutoffDepth << " " << current.branchingFactor << endl;
 
     if( current.branchingFactor > 2 ) {
         totalExpandedNodes++;
@@ -1197,6 +1290,11 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
     state start = *(new state(myPosition, opPosition));
     start.findObj();
 
+    if( TL < 7.0 )
+        cutoffDepth = 1;
+    else
+        cutoffDepth = 1;
+
     state nextState = maxVal( start, -INT_MAX, INT_MAX, 1, start.objFunction );
 
 //    pass
@@ -1277,7 +1375,6 @@ int main(int argc, char *argv[])
     cout<< "Player " << player << endl;
     cout<< "Time " << time_left << endl;
     cout<< "Board size " << N << "x" << M << " :" << K << endl;
-    float TL;
     int om,oro,oco;
     int m,r,c;
     int d=3;
@@ -1433,7 +1530,7 @@ int main(int argc, char *argv[])
         }
 
         cout << "Waiting for you to press something so that I can continue\n";
-//        cin.ignore();
+        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));

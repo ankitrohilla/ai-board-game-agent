@@ -1,0 +1,7 @@
+./compile.sh
+
+if $1 = 1
+gnome-terminal --command=python\ ./Quoridor090910/TkBoard.py
+
+gnome-terminal --command=./client_ai\ 127.0.0.1\ 12345
+gnome-terminal --command=./client_ai\ 127.0.0.1\ 12345
