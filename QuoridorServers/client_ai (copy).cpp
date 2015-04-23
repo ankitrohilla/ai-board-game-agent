@@ -549,7 +549,7 @@ public:
         opPosition.printPath();
     }
 
-    vector<state> exploreStates(who whoCalled , int depth);
+    vector<state> exploreStates( who whoCalled );
 
 };
 
@@ -560,7 +560,7 @@ typedef vector<state>::iterator vecSIt;
 state minVal(state current, int alpha, int beta, int depth, int fatherObj);
 state maxVal(state current, int alpha, int beta, int depth, int fatherObj);
 
-vector<state> state::exploreStates(who whoCalled, int depth ) {
+vector<state> state::exploreStates(who whoCalled ) {
 
     vector<state> children;
 
@@ -703,8 +703,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //            smartly skip placing wall based on the if condition
             if( whoCalled == me ) {
-//                if I have called maxVal for the first time, I will check for all possible places for walls
-                if( (abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4) && depth > 1 )
+                if( abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4 )
                     continue;
             } else {
                 if( abs(myPosition.row - i) >= 4 || abs(myPosition.col - j) >= 4 )
@@ -798,8 +797,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //            smartly skip placing wall based on the if condition
             if( whoCalled == me ) {
-//                if I have called maxVal for the first time, I will check for all possible places for walls
-                if( (abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4) && depth > 1 )
+                if( abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4 )
                     continue;
             } else {
                 if( abs(myPosition.row - i) >= 4 || abs(myPosition.col - j) >= 4 )
@@ -1385,7 +1383,7 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
     statesProcessed++;
 
     vector<state> children;
-    children = current.exploreStates( op, depth );
+    children = current.exploreStates( op );
     current.branchingFactor = children.size();
 
 //    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
@@ -1485,7 +1483,7 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
 
 
     vector<state> children;
-    children = current.exploreStates( me, depth );
+    children = current.exploreStates( me );
     current.branchingFactor = children.size();
 
 //    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
@@ -1850,7 +1848,7 @@ int main(int argc, char *argv[])
 
         cout << "Waiting for you to press something so that I can send m r c as " << m << " " << r << " " << c << "\n";
 
-        cin.ignore();
+//        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));

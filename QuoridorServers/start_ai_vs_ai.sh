@@ -7,7 +7,7 @@ elif [[ $1 = '2' ]]; then
 elif [[ $1 = '3' ]]; then
 	gnome-terminal --command=python\ ./Quoridor131314/TkBoard.py
 else
-	echo "Chutie sai argument daal"
+	echo "sai argument daalte ni banta"
 	exit
 fi	
 

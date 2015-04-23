@@ -7,7 +7,7 @@ elif [[ $1 = '2' ]]; then
 elif [[ $1 = '3' ]]; then
 	gnome-terminal --command=python\ ./Quoridor131314/TkBoard.py
 else
-	echo "Chutie sai argument daal"
+	echo "ullu sai argument daal"
 	exit
 fi	
 
@@ -20,6 +20,6 @@ elif [[ $3 = '2' ]]; then
     gnome-terminal --command=./$2\ 127.0.0.1\ 12345
     gnome-terminal --command=./client_ai\ 127.0.0.1\ 12345
 else
-	echo "Chutie ye to bata pehle kon chalega"
+	echo "ullu ye to bata pehle kon chalega"
 	exit
 fi

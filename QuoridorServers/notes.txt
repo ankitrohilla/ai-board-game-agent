@@ -3,4 +3,6 @@
 
 to rectify the problem, I am changing the findObj() so that if the other player is close to victory, consider it heavy and it worked a bit but still losing to client_harinder
 
-there might be a problem with our minimax as increasing depth makes our player play bad
+there might be a problem with our minimax as increasing depth makes our player play bad - resolved
+
+i am placing smartness in //    how many horizontal walls can be placed section to prune and select walls effectively

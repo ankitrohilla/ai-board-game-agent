@@ -291,8 +291,6 @@ public:
     bool checkPathBlock( int r, int c ) {
         if( findShortestPath() == NO_PATH )
             return true;
-        else
-            return false;
     }
 
     void updateMap(int m, int r, int c, who whoCalled, playerPosition callerPlayer , playerPosition otherPlayer);
@@ -422,21 +420,21 @@ public:
     }
 
     void printPath() {
-        cout << "According to " << whoMI+1 << " :- ";
-        for_each( pathToGoal.begin(), pathToGoal.end(), [](int i){ cout<<"["<<tile::getRowFromId(i)<<","<<tile::getColFromId(i)<<"]"; });
-        cout << endl;
+        //cout << "According to " << whoMI+1 << " :- ";
+//        for_each( pathToGoal.begin(), pathToGoal.end(), [](int i){ //cout<<"["<<tile::getRowFromId(i)<<","<<tile::getColFromId(i)<<"]"; });
+        //cout << endl;
     }
 
     void printAdjList() {
-        cout << "adjList printing - \n";
+        //cout << "adjList printing - \n";
 
         for( int i = 1; i <= N; i++ ) {
             for( int j = 1; j <= M; j++ ) {
 
-                cout << "id i j -> " << tile::getIdFromRowCol(i,j) << "[" << i << " , " << j << "] -> ";
+                //cout << "id i j -> " << tile::getIdFromRowCol(i,j) << "[" << i << " , " << j << "] -> ";
 
-                for_each( boardMap[i][j].adjList.begin(), boardMap[i][j].adjList.end(), [](int i){cout<<"["<<tile::getRowFromId(i)<<" , "<<tile::getColFromId(i)<<"] ";});
-                cout << endl;
+//                for_each( boardMap[i][j].adjList.begin(), boardMap[i][j].adjList.end(), [](int i){//cout<<"["<<tile::getRowFromId(i)<<" , "<<tile::getColFromId(i)<<"] ";});
+                //cout << endl;
 
             }
         }
@@ -453,10 +451,10 @@ void playerPosition::declareWinner() {
 //        else check if I won
     if( whoWon != none && whoWon == whoMI ) {
         marginOfVictory++;
-        cout << "margin of victory -> " << marginOfVictory << endl;
+        //cout << "margin of victory -> " << marginOfVictory << endl;
     } else if( find( goalTiles.begin(), goalTiles.end(), id) != goalTiles.end() ) {
         whoWon = whoMI;
-        cout << whoWon+1 << " won\n";
+        //cout << whoWon+1 << " won\n";
     } else if( whoWon != none && whoWon != whoMI ) {
 
 //        if op has won
@@ -541,15 +539,15 @@ public:
     }
 
     void printStateStats() {
-        cout << "Sequence of ms rs and cs with which this state will be taken is - \n";
+        //cout << "Sequence of ms rs and cs with which this state will be taken is - \n";
         for( int i = 0; i < ms.size(); i++ ) {
-            cout << "mrc - " << ms[i] << " " << rs[i] << " " << cs[i] << "\n";
+            //cout << "mrc - " << ms[i] << " " << rs[i] << " " << cs[i] << "\n";
         }
-        myPosition.printPath();
-        opPosition.printPath();
+//        myPosition.printPath();
+//        opPosition.printPath();
     }
 
-    vector<state> exploreStates(who whoCalled , int depth);
+    vector<state> exploreStates( who whoCalled );
 
 };
 
@@ -560,18 +558,18 @@ typedef vector<state>::iterator vecSIt;
 state minVal(state current, int alpha, int beta, int depth, int fatherObj);
 state maxVal(state current, int alpha, int beta, int depth, int fatherObj);
 
-vector<state> state::exploreStates(who whoCalled, int depth ) {
+vector<state> state::exploreStates(who whoCalled ) {
 
     vector<state> children;
 
     playerPosition myPosition = this->myPosition;
     playerPosition opPosition = this->opPosition;
 
-//    cout << "exploreStates called\n";
+//    //cout << "exploreStates called\n";
 
 //    caller has already won, he can't move
     if( whoWon == whoCalled ) {
-        cout << "declared that " << whoWon+1 << " has won the match\n";
+        //cout << "declared that " << whoWon+1 << " has won the match\n";
         goto placeWAlls;
     }
 
@@ -610,10 +608,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
             temp.findObj();
-            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
-//            cout << "Printing adjacency list\n";
-//            temp.myPosition.printAdjList();
-//            temp.opPosition.printAdjList();
+            //cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
 
 //            check for TRICKY PATH BLOCK when my movement blocks other person's path
             if( temp.objFunction == INVALID_STATE ) {
@@ -645,7 +640,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.r = myPosition.oldRow;
             temp.c = myPosition.oldCol;
             temp.findObj();
-            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+            //cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
             statesExplored++;
             children.push_back(temp);
 
@@ -669,11 +664,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
             temp.findObj();
-            cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
-//            cout << "Printing adjacency list\n";
-//            temp.myPosition.printAdjList();
-//            temp.opPosition.printAdjList();
-
+            //cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
             statesExplored++;
             children.push_back(temp);
 
@@ -684,7 +675,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
     }
 
 //    I won't consider placing walls if my opponent has already won
-    if( (me == whoCalled && op == whoWon) || (op == whoCalled && me == whoWon) )
+    if( me == whoCalled && op == whoWon || op == whoCalled && me == whoWon )
         return children;
 
 //    now I will consider placing walls
@@ -703,8 +694,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //            smartly skip placing wall based on the if condition
             if( whoCalled == me ) {
-//                if I have called maxVal for the first time, I will check for all possible places for walls
-                if( (abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4) && depth > 1 )
+                if( abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4 )
                     continue;
             } else {
                 if( abs(myPosition.row - i) >= 4 || abs(myPosition.col - j) >= 4 )
@@ -781,7 +771,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
                 }
 
 //                cout << "pushing to state\n";
-                cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+                //cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
                 statesExplored++;
                 children.push_back(temp);
 
@@ -798,8 +788,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //            smartly skip placing wall based on the if condition
             if( whoCalled == me ) {
-//                if I have called maxVal for the first time, I will check for all possible places for walls
-                if( (abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4) && depth > 1 )
+                if( abs(opPosition.row - i) >= 4 || abs(opPosition.col - j) >= 4 )
                     continue;
             } else {
                 if( abs(myPosition.row - i) >= 4 || abs(myPosition.col - j) >= 4 )
@@ -874,7 +863,7 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
                 }
 
 //                cout << "pushing to state\n";
-                cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+                //cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
                 statesExplored++;
                 children.push_back(temp);
 
@@ -916,15 +905,12 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
         bool pushed;
         vector<int> temp;
 
-//        oldtop
+//        top
         if( oldRow > 1 ) {
             vector<int> oldPosTopAdjList = boardMap[ oldRow-1 ][ oldCol ].adjList;
-            if( oldRow == 7 && oldCol == 4 )
-                cout << "printing for [6,4] -> ";
 
             for_each( oldPosTopAdjList.begin(), oldPosTopAdjList.end(), [&](int i){
-                if( oldRow == 6 && oldCol == 4 )
-                    cout << i << " ";
+
                 if( (i == oldId+M || i == oldId-1 || i == oldId+1) && !pushed ) {
                     temp.push_back( oldId );
                     pushed = true;
@@ -936,7 +922,7 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow-1 ][ oldCol ].adjList = temp;
             temp.clear();
         }
-//        oldlef
+//        lef
         if( oldCol > 1 ) {
             vector<int> oldPosLefAdjList = boardMap[ oldRow ][ oldCol-1l ].adjList;
 
@@ -953,7 +939,7 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow ][ oldCol-1 ].adjList = temp;
             temp.clear();
         }
-//        oldrig
+//        rig
         if( oldCol < M ) {
             vector<int> oldPosRigAdjList = boardMap[ oldRow ][ oldCol+1 ].adjList;
 
@@ -970,7 +956,7 @@ void playerPosition::updateMap( int m, int r, int c, who whoCalled, playerPositi
             boardMap[ oldRow ][ oldCol+1 ].adjList = temp;
             temp.clear();
         }
-//        oldbot
+//        bot
         if( oldRow < N ) {
             vector<int> oldPosBotAdjList = boardMap[ oldRow+1 ][ oldCol ].adjList;
 
@@ -1379,22 +1365,22 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
         return current;
     }
 
-    cout << "minVal called and ply and current mrc of the caller " << 2*depth << " " << current.m << " "  << current.r;
-    cout << " " << current.c << endl;
+    //cout << "minVal called and ply and current mrc of the caller " << 2*depth << " " << current.m << " "  << current.r;
+    //cout << " " << current.c << endl;
 
     statesProcessed++;
 
     vector<state> children;
-    children = current.exploreStates( op, depth );
+    children = current.exploreStates( op );
     current.branchingFactor = children.size();
 
-//    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
-//        cutoffDepth = 1;
+    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
+        cutoffDepth = 1;
 
 //    cout << "cutoffDepth and branching factor is " << cutoffDepth << " " << current.branchingFactor << endl;
 
     if( children.size() == 0 ) {
-        cout << "minVal no children\n";
+        //cout << "minVal no children\n";
         current.utilityFunction = PASS;
         return current;
     }
@@ -1407,7 +1393,7 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
         state s = *it;
         s.findObj();
 
-//        cout << "Before mrc " << s.m << " " << s.r << " " << s.c << ", alpha beta are " << alpha << " " << beta << endl;
+        //cout << "Before mrc " << s.m << " " << s.r << " " << s.c << ", alpha beta are " << alpha << " " << beta << endl;
 
 //        cout << "\ns.objFunction s.myPosition.findShortestPath() current.myPosition.findShortestPath() " << s.objFunction << " " << s.myPosition.findShortestPath() << " " << current.myPosition.findShortestPath() << endl;
 //        cout << "\nm r c " << s.m << " " << s.r << " " << s.c << endl;
@@ -1454,14 +1440,14 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
                 minState.utilityFunction = nextState.utilityFunction;
             }
         }
-//        cout << "After mrc " << s.m << " " << s.r << " " << s.c << ", alpha beta are " << alpha << " " << beta << endl;
+        //cout << "After mrc " << s.m << " " << s.r << " " << s.c << ", alpha beta are " << alpha << " " << beta << endl;
     }
 
     children.clear();
 
-    cout << "minVal exiting and ply and current mrc of the caller " << 2*depth << " " << current.m << " "  << current.r;
-    cout << " " << current.c << endl;
-    cout << "the mrc of best child and utilityfunction obtained " << minState.m << " "  << minState.r << " "  << minState.c << " " << minState.utilityFunction << endl;
+    //cout << "minVal exiting and ply and current mrc of the caller " << 2*depth << " " << current.m << " "  << current.r;
+    //cout << " " << current.c << endl;
+    //cout << "the mrc of best child and utilityfunction obtained " << minState.m << " "  << minState.r << " "  << minState.c << " " << minState.utilityFunction << endl;
 
     return minState;
 }
@@ -1480,16 +1466,16 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
         return current;
     }
 
-    cout << "maxVal called and ply and current mrc of the caller " << 2*depth-1 << " " << current.m << " "  << current.r;
-    cout << " " << current.c << endl;
+    //cout << "maxVal called and ply and current mrc of the caller " << 2*depth-1 << " " << current.m << " "  << current.r;
+    //cout << " " << current.c << endl;
 
 
     vector<state> children;
-    children = current.exploreStates( me, depth );
+    children = current.exploreStates( me );
     current.branchingFactor = children.size();
 
-//    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
-//        cutoffDepth = 1;
+    if( cutoffDepth > 1 && current.branchingFactor > 10 && TL < 25 )
+        cutoffDepth = 1;
 
 //    cout << "cutoffDepth and branching factor is " << cutoffDepth << " " << current.branchingFactor << endl;
 
@@ -1501,7 +1487,7 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
     }
 
     if( children.size() == 0 ) {
-        cout << "maxVal no children\n";
+        //cout << "maxVal no children\n";
         current.utilityFunction = PASS;
         return current;
     }
@@ -1577,11 +1563,9 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
 
     children.clear();
 
-    cout << "maxVal exiting and ply and current mrc of the caller " << 2*depth-1 << " " << current.m << " "  << current.r;
-    cout << " " << current.c << endl;
-    cout << "the mrc of best child and utilityfunction obtained " << maxState.m << " "  << maxState.r << " "  << maxState.c << " " << maxState.utilityFunction << endl;
-//    cout << "the path to goal for this state\n";
-//    maxState.printStateStats();
+    //cout << "maxVal exiting and ply and current mrc of the caller " << 2*depth-1 << " " << current.m << " "  << current.r;
+    //cout << " " << current.c << endl;
+    //cout << "the mrc of best child and utilityfunction obtained " << maxState.m << " "  << maxState.r << " "  << maxState.c << " " << maxState.utilityFunction << endl;
 
     return maxState;
 }
@@ -1593,10 +1577,10 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
     state start = *(new state(myPosition, opPosition, 0, 0, 0));
     start.findObj();
 
-//    if( TL < 7.0 )
-//        cutoffDepth = 1;
-//    else
-//        cutoffDepth = STANDARD_CUTOFF_DEPTH;
+    if( TL < 7.0 )
+        cutoffDepth = 1;
+    else
+        cutoffDepth = STANDARD_CUTOFF_DEPTH;
 
     state nextState = maxVal( start, -INT_MAX, INT_MAX, 1, start.objFunction );
 
@@ -1610,7 +1594,7 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
 
     totalMinimaxCalled++;
 
-    cout << "playerPosition::minimax( playerPosition myPosition, playerPosition opPosition ) found nextState with utility Function - " << nextState.utilityFunction << "\n";
+    //cout << "playerPosition::minimax( playerPosition myPosition, playerPosition opPosition ) found nextState with utility Function - " << nextState.utilityFunction << "\n";
 //    cout << "nextState's path is - \n";
 //    nextState.myPosition.printPath();
 //    nextState.opPosition.printPath();
@@ -1620,12 +1604,12 @@ void playerPosition::minimax( playerPosition myPosition, playerPosition opPositi
     this->r = nextState.r;
     this->c = nextState.c;
 
-    cout << "myPosition.minimax( myPosition, opPosition ) gave m r c - " << m << " " << r << " " << c << endl;
+    //cout << "myPosition.minimax( myPosition, opPosition ) gave m r c - " << m << " " << r << " " << c << endl;
     nextState.printStateStats();
 
     time_t end = clock();
 
-    cout << "\n\nTime taken is - " << float(end - beg)/CLOCKS_PER_SEC << endl;
+    //cout << "\n\nTime taken is - " << float(end - beg)/CLOCKS_PER_SEC << endl;
 
     if( maxMinimaxTime < float(end - beg)/CLOCKS_PER_SEC )
         maxMinimaxTime = float(end - beg)/CLOCKS_PER_SEC;
@@ -1850,7 +1834,7 @@ int main(int argc, char *argv[])
 
         cout << "Waiting for you to press something so that I can send m r c as " << m << " " << r << " " << c << "\n";
 
-        cin.ignore();
+//        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
@@ -1892,6 +1876,6 @@ int main(int argc, char *argv[])
     cout << "Time left                                   - " << TL                        << endl;
     cout << "weights                                     - " << moveWt<<" "<<horizontalWallWt<<" "<<verticalWallWt<<endl;
     cout << endl << "The End" << endl;
-    cin.ignore();
+//    cin.ignore();
     return 0;
 }

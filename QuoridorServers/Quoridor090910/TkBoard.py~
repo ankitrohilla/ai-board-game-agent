@@ -1,4 +1,4 @@
-60import socket, sys, time
+import socket, sys, time
 from Tkinter import *
 from math import floor
 from GameStack import GameStack
