@@ -322,6 +322,8 @@ public:
         vector<int> temp;
         bool pushed = false;
 
+        cout << whoMI+1 << " removing other player from its adjacency list\n";
+
 //        checking for the cell to the lef of the winner
         if( col > 1 ) {
             for_each( boardMap[row][col-1].adjList.begin(), boardMap[row][col-1].adjList.end(), [&](int i){
@@ -337,6 +339,8 @@ public:
 
             });
             boardMap[row][col-1].adjList = temp;
+            pushed = false;
+            temp.clear();
         }
 //        checking for the cell to the rig of the winner
         if( col < M ) {
@@ -353,11 +357,12 @@ public:
 
             });
             boardMap[row][col+1].adjList = temp;
+            pushed = false;
+            temp.clear();
         }
 //        checking for the cell to the top of the winner
         if( row > 1 ) {
             for_each( boardMap[row-1][col].adjList.begin(), boardMap[row-1][col].adjList.end(), [&](int i){
-
                 if( i == id+M || i == id-1 || i == id+1 ) {
                     if( !pushed ) {
                         temp.push_back( id );
@@ -369,6 +374,8 @@ public:
 
             });
             boardMap[row-1][col].adjList = temp;
+            pushed = false;
+            temp.clear();
         }
 //        checking for the cell to the bot of the winner
         if( row < N ) {
@@ -385,8 +392,9 @@ public:
 
             });
             boardMap[row+1][col].adjList = temp;
+            pushed = false;
+            temp.clear();
         }
-
     }
 
 //    the order for this function is very important, first positions are updated, then graph of map is updated, then shortest path is obtained
@@ -521,6 +529,11 @@ public:
         else{
             wt=verticalWallWt;
         }
+
+//        not to change TRICKY_PATH_BLOCK to INVALID_STATE howsoever
+        if( objFunction == TRICKY_PATH_BLOCK )
+            return;
+
         if( opPosition.findShortestPath() != NO_PATH && myPosition.findShortestPath() != NO_PATH ) {
             objFunction = (opPosition.findShortestPath() - myPosition.findShortestPath())*100;
 //            opponent is too close to victory, much bad state
@@ -610,16 +623,17 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
             temp.findObj();
+
+//            check for TRICKY PATH BLOCK when my movement blocks other person's path
+            if( temp.objFunction == INVALID_STATE ) {
+                cout << "the state mentioned below has been marked as TRICKY_PATH_BLOCK\n";
+                temp.objFunction = TRICKY_PATH_BLOCK;
+            }
+
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
 //            cout << "Printing adjacency list\n";
 //            temp.myPosition.printAdjList();
 //            temp.opPosition.printAdjList();
-
-//            check for TRICKY PATH BLOCK when my movement blocks other person's path
-            if( temp.objFunction == INVALID_STATE ) {
-//                cout << "the state mentioned above has been marked as TRICKY_PATH_BLOCK\n";
-                temp.objFunction = TRICKY_PATH_BLOCK;
-            }
 
             statesExplored++;
             children.push_back(temp);
@@ -646,6 +660,10 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.c = myPosition.oldCol;
             temp.findObj();
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+//            cout << "Printing adjacency list\n";
+//            temp.myPosition.printAdjList();
+//            temp.opPosition.printAdjList();
+
             statesExplored++;
             children.push_back(temp);
 
@@ -669,10 +687,19 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
             temp.r = tile::getRowFromId(i);
             temp.c = tile::getColFromId(i);
             temp.findObj();
+
+//            check for TRICKY PATH BLOCK when op movement blocks other person's path
+            if( temp.objFunction == INVALID_STATE ) {
+                cout << "the state mentioned below has been marked as TRICKY_PATH_BLOCK\n";
+                temp.objFunction = TRICKY_PATH_BLOCK;
+            }
+
             cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
 //            cout << "Printing adjacency list\n";
 //            temp.myPosition.printAdjList();
 //            temp.opPosition.printAdjList();
+
+
 
             statesExplored++;
             children.push_back(temp);
@@ -782,6 +809,10 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //                cout << "pushing to state\n";
                 cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+//                cout << "Printing adjacency list\n";
+//                temp.myPosition.printAdjList();
+//                temp.opPosition.printAdjList();
+
                 statesExplored++;
                 children.push_back(temp);
 
@@ -875,6 +906,10 @@ vector<state> state::exploreStates(who whoCalled, int depth ) {
 
 //                cout << "pushing to state\n";
                 cout << "State m r c objFunction -> " << temp.m << " " << temp.r << " " << temp.c << " " << temp.objFunction << "\n";
+//                cout << "Printing adjacency list\n";
+//                temp.myPosition.printAdjList();
+//                temp.opPosition.printAdjList();
+
                 statesExplored++;
                 children.push_back(temp);
 
@@ -1415,7 +1450,8 @@ state minVal(state current, int alpha, int beta, int depth, int fatherObj){
 //        this child is blocking opponent i.e. TRICKY_PATH_BLOCK and I was not here before, then come here for sure
         if( s.objFunction == TRICKY_PATH_BLOCK && s.opPosition.findShortestPath() < current.opPosition.findShortestPath() ) {
             s.utilityFunction = -INT_MAX;
-            return s;
+            minState = s;
+            break;
         }
 
 //        my children will maximize their objective function
@@ -1519,7 +1555,8 @@ state maxVal(state current, int alpha, int beta, int depth, int fatherObj){
 //        this child is blocking opponent i.e. TRICKY_PATH_BLOCK and I was not here before, then come here for sure
         if( s.objFunction == TRICKY_PATH_BLOCK && s.myPosition.findShortestPath() < current.myPosition.findShortestPath() ) {
             s.utilityFunction = +INT_MAX;
-            return s;
+            maxState = s;
+            break;
         }
 
         s.findObj();
@@ -1765,11 +1802,11 @@ int main(int argc, char *argv[])
 //        expectedMove.updateWeight(om,oro,oco);
         cout<<"Weights "<<moveWt <<" "<<horizontalWallWt<<" "<<verticalWallWt<<endl;
 //        cin.ignore();
-//        cout << "BEFORE UPDATE\n";
-//        cout << "\nMy adj list before update\n";
-//        myPosition.printAdjList();
-//        cout << "Op adj list before update\n";
-//        opPosition.printAdjList();
+        cout << "BEFORE UPDATE\n";
+        cout << "\nMy adj list before update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list before update\n";
+        opPosition.printAdjList();
 
 //        cin.ignore();
 
@@ -1780,13 +1817,14 @@ int main(int argc, char *argv[])
 
 //        cout << "\n\n----------------------------------------------------------------------------------------\n\n";
 
-//        cout << "AFTER UPDATE\n";
-//        cout << "My adj list after update\n";
-//        myPosition.printAdjList();
-//        cout << "Op adj list after update\n";
-//        opPosition.printAdjList();
-
         opPosition.declareWinner();
+        myPosition.declareWinner();
+
+        cout << "AFTER UPDATE\n";
+        cout << "My adj list after update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list after update\n";
+        opPosition.printAdjList();
 
 //        opponent's move blocked me
         if( myPosition.checkPathBlock( oro, oco) == true && om == 0 ) {
@@ -1815,22 +1853,23 @@ int main(int argc, char *argv[])
         r = myPosition.r;
         c = myPosition.c;
 
-//        cout << "\nMy adj list before update\n";
-//        myPosition.printAdjList();
-//        cout << "Op adj list before update\n";
-//        opPosition.printAdjList();
+        cout << "\nMy adj list before update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list before update\n";
+        opPosition.printAdjList();
 
 //        the last parameter is used to handle jumpover adjustments if a wall is placed and a person is already standing
 //        adjacent to it
         myPosition.update( m, r, c, me, myPosition, opPosition );
         opPosition.update( m, r, c, me, myPosition, myPosition );
 
-//        cout << "My adj list after update\n";
-//        myPosition.printAdjList();
-//        cout << "Op adj list after update\n";
-//        opPosition.printAdjList();
-
         myPosition.declareWinner();
+        opPosition.declareWinner();
+
+        cout << "My adj list after update\n";
+        myPosition.printAdjList();
+        cout << "Op adj list after update\n";
+        opPosition.printAdjList();
 
         cout << "myPosition.minimax( myPosition, opPosition ) gave m r c - " << m << " " << r << " " << c << endl;
 
@@ -1850,7 +1889,7 @@ int main(int argc, char *argv[])
 
         cout << "Waiting for you to press something so that I can send m r c as " << m << " " << r << " " << c << "\n";
 
-        cin.ignore();
+//        cin.ignore();
 
         snprintf(sendBuff, sizeof(sendBuff), "%d %d %d", m, r , c);
         write(sockfd, sendBuff, strlen(sendBuff));
